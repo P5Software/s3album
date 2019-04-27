@@ -154,11 +154,11 @@ function ls(dir, cb) {
 }
 
 function albumPhotoPath(album) {
-  return rmTrailingChar(config.prefix, '/') + '/albums/' + encodeURIComponent(album) + '/photos/';
+  return rmTrailingChar(config.prefix, '/') + 'albums/' + encodeURIComponent(album) + '/photos/';
 }
 
 function albumThumbPath(album) {
-  return rmTrailingChar(config.prefix, '/') + '/albums/' + encodeURIComponent(album) + '/thumbs/';
+  return rmTrailingChar(config.prefix, '/') + 'albums/' + encodeURIComponent(album) + '/thumbs/';
 }
 
 function getPhotos(album, cb) {
