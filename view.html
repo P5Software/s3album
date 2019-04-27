@@ -188,7 +188,7 @@ function loadAlbum() {
   $('.page-header').text(albumName && albumName !== '' ? albumName : "''");
   getPhotos(albumName, function (err, photos) {
     if (err) {
-      $('#messages').html('<div class="alert alert-danger" role="alert"><b>That\'s a 404!</b> Or, in English: this album does not exist.</div>');
+      $('#messages').html('<div class="alert alert-danger" role="alert"><b>404</b> This album does not exist.</div>');
       document.title = '404 Not Found: "' + albumName + '"';
       return;
     }
