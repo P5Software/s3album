@@ -171,14 +171,14 @@ function getPhotos(album, cb) {
       return {
         title: f,
         src: baseUrl + photoBase + f,
-        thumb: baseUrl +  thumbBase + stripExt(basename(f)) + '.jpg'
+        thumb: baseUrl +  thumbBase + basename(f)
       };
     }));
   });
 }
 
 function albumNameFromHash() {
-  return location.hash.slice(1).split('/')[0];
+  return decodeURIComponent(location.hash.slice(1).split('/')[0]);
 }
 
 var albumName;
