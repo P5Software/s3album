@@ -80,7 +80,10 @@ var config = {
   endpoint: undefined,
   sslEnabled: undefined,
   forcePathStyle: undefined,
-  prefix: undefined
+  prefix: undefined,
+  displayFileNameUnderThumbs: undefined,
+  displayFileNameUnderPictures: undefined,
+  displaySubfolders: undefined
 };
 
 function detectConfig() {
@@ -111,6 +114,10 @@ function detectConfig() {
   config.prefix = PREFIX || config.prefix;
   config.endpoint = ENDPOINT || config.endpoint;
   config.forcePathStyle = FORCE_PATH_STYLE || config.forcePathStyle;
+  config.displayFileNameUnderThumbs = DISPLAY_FILENAME_UNDER_THUMBS || false;
+  config.displayFileNameUnderPictures = DISPLAY_FILENAME_UNDER_THUMBS || false;
+  config.displaySubfolders = DISPLAY_SUBFOLDERS || false;
+
 }
 
 
@@ -128,7 +135,13 @@ function ls(dir, cb) {
   $.get(url).done(function (data) {
     if (!$(data).find('ListBucketResult').length) return cb('Malformed response');
     var files = $.map($(data).find('Contents Key'), function (k) {
-      return basename(k.innerHTML);
+      //Do not return directories
+      if(k.innerHTML.substr(-1) == "/" && config.displaySubfolders == false){
+        console.log("Suppressing Contents (DISPLAY_SUBFOLDERS == false): " + k.innerHTML);
+      }
+      else {
+        return basename(k.innerHTML);
+      };
     });
     var dirs = $.map($(data).find('CommonPrefixes Prefix'), function (k) {
       return basename(k.innerHTML);
@@ -184,15 +197,25 @@ function loadAlbum() {
     $('#albumThumbs').empty();
 
     photos.forEach(function (p) {
-      $('#albumThumbs').append([
-        '<div class="col-lg-3 col-md-4 col-xs-6 thumb">',
-          '<a class="thumbnail fancybox" rel="group" title="', p.title, '" href="', p.src, '">',
-            '<img class="img-responsive" src="', p.thumb, '" alt="">',
-            '<div class="caption">',
-              p.title,
-            '</div>',
-          '</a>',
-        '</div>'].join(''));
+      var strAlbumThumbs = [];
+
+      strAlbumThumbs.push('<div class="col-lg-3 col-md-4 col-xs-6 thumb">');
+      strAlbumThumbs.push('<a class="thumbnail fancybox" rel="group" title="', p.title, '" href="', p.src, '">');
+      strAlbumThumbs.push('<img class="img-responsive" src="', p.thumb, '" alt="">');
+
+      //Determine if we should append filenames under thumbnails
+      if(config.displayFileNameUnderThumbs == true){
+        strAlbumThumbs.push('<div class="caption">');
+        strAlbumThumbs.push(p.title);
+        strAlbumThumbs.push('</div>');
+      }
+
+      //Finish up the div
+      strAlbumThumbs.push('</a>');
+      strAlbumThumbs.push('</div>');
+
+      $('#albumThumbs').append(strAlbumThumbs.join(''));
+
     });
     $(".fancybox").fancybox();
   });
