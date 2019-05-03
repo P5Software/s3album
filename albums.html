@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Album List</title>
+
+<script>
+/*
+ * DEFAULTS
+ *
+ * Override the automatically detected parameters here:
+ */
+ENDPOINT = "s3.amazonaws.com";           // e.g. 's3.amazonaws.com'
+BUCKET = "photos.monorailyellow.com";             // e.g. 'butketname'
+SSL_ENABLED = undefined;        // e.g. true
+FORCE_PATH_STYLE = undefined;   // e.g. false
+PREFIX = undefined;             // e.g. 'path/to/albums/root/'
+ALBUMCOVER = undefined; // e.g. cover.jpg
+</script>
+
+<style>
+.thumb {
+    margin-bottom: 30px;
+}
+.caption{
+  text-align: center;
+}
+</style>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet">
+
+
+<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+<![endif]-->
+</head>
+<body>
+
+<div class="container">
+  <div class="row">
+      <div>&nbsp;</div>
+    <div class="col-lg-12">
+      <h1 class="page-header" style="color:midnightblue;">Album List</h1>
+    </div>
+
+    <div class="row" id="albumThumbs">
+    </div>
+  </div>
+    <div id="messages"></div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js"></script>
+
+<script>
+
+/*
+ * Helpers
+ */
+
+function basename(path) {
+  return rmTrailingChar(path, '/').split('/').slice(-1)[0];
+}
+
+function rmTrailingChar(str, c) {
+  if (str.slice(-1)[0] === c) return str.slice(0, -1);
+  else return str;
+}
+
+/*
+ * Config utils
+ */
+
+var config = {
+  bucket: undefined,
+  endpoint: undefined,
+  sslEnabled: undefined,
+  forcePathStyle: undefined,
+  prefix: undefined,
+  albumCover: undefined
+};
+
+function detectConfig() {
+  var host = window.location.hostname;
+  var path = window.location.pathname.split('/').slice(1);
+  var names, me;
+  config.forcePathStyle = true;
+  if (host.endsWith('s3.amazonaws.com') &&
+    (names = host.split('.')).length === 4) {
+      config.bucket = names[0];
+      config.endpoint = names.slice(1).join('.');
+      config.forcePathStyle = false;
+      me = path;
+  }
+  else {
+    config.bucket = path[0];
+    me = path.slice(1);
+    config.endpoint = host;
+  }
+
+  if (me.join('').endsWith('.html'))
+    config.prefix = me.slice(0, -1).join('/');
+  else
+    config.prefix = me.join('/');
+
+  config.sslEnabled = SSL_ENABLED || window.location.protocol.startsWith('https');
+  config.bucket = BUCKET || config.bucket;
+  config.prefix = PREFIX || config.prefix;
+  config.endpoint = ENDPOINT || config.endpoint;
+  config.forcePathStyle = FORCE_PATH_STYLE || config.forcePathStyle;
+  config.albumCover = ALBUMCOVER || "cover.jpg";
+
+}
+
+/*
+ * Bucket utils
+ */
+
+function bucketBaseUrl() {
+  var proto = config.sslEnabled ? 'https://' : 'http://';
+  var url = proto;
+  if (config.forcePathStyle) url += config.endpoint + '/' + config.bucket;
+  else url += config.bucket + '.' + config.endpoint;
+  return url;
+}
+
+
+function ls(dir, cb) { //Function gets the list of albums from the directory passed in, which should be albums/
+
+  var url = bucketBaseUrl() + '?delimiter=/&prefix=' + dir;
+
+  //Retrieve the list of directories under albums/ by doing a list bucket on S3
+  $.get(url).done(function (data) {
+    if (!$(data).find('ListBucketResult').length) return cb('Malformed response');
+
+    //Parse the list of directories returned in Common Prefixes
+    var dirs = $.map($(data).find('CommonPrefixes Prefix'), function (k) {
+      return basename(k.innerHTML); //Contains the folder name
+    });
+
+    cb(null, dirs);
+
+  }).fail(function (x, y, err) {
+
+    if (cb) return cb(err);
+    throw err;
+
+  });
+}
+
+
+/*
+ * Album utils
+ */
+
+function getAlbumList(cb) { //Function loads up a JSON payload from the result of listing the directories
+
+  var albumBase = rmTrailingChar(config.prefix, '/') + 'albums/';
+
+  ls(albumBase, function (err, albums) {
+    if (err) { if (cb) return cb(err); throw err; }
+    var baseUrl = bucketBaseUrl() + '/';
+    cb(null, albums.map(function (f) {
+      return {
+        title: f,
+        src: "view.html#" + encodeURIComponent(f) + "/",
+        cover: baseUrl +  albumBase + encodeURIComponent(f) + '/' + config.albumCover
+      };
+    }));
+  });
+}
+
+
+function loadDisplay() {
+ 
+  getAlbumList(function (err, albums) {
+
+    $('#albumThumbs').empty();
+
+    albums.forEach(function (alb) {
+      var strAlbumThumbs = [];
+
+      strAlbumThumbs.push('<div class="col-lg-3 col-md-4 col-xs-6 thumb">');
+      strAlbumThumbs.push('<a class="thumbnail fancybox" rel="group" title="', alb.title, '" href="', alb.src, '">');
+      strAlbumThumbs.push('<img class="img-responsive" src="', alb.cover, '" alt="">');
+      strAlbumThumbs.push('<div class="caption">');
+      strAlbumThumbs.push(alb.title);
+      strAlbumThumbs.push('</div>');
+      strAlbumThumbs.push('</a>');
+      strAlbumThumbs.push('</div>');
+
+      $('#albumThumbs').append(strAlbumThumbs.join(''));
+
+    });
+
+    $(".fancybox").fancybox();
+  })};
+
+/*
+ * Page Events
+ */
+
+$(document).ready(function () {
+  detectConfig();
+  loadDisplay();
+});
+
+</script>
+
+</body>
+</html>
