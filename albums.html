@@ -18,6 +18,7 @@ SSL_ENABLED = undefined;        // e.g. true
 FORCE_PATH_STYLE = undefined;   // e.g. false
 PREFIX = undefined;             // e.g. 'path/to/albums/root/'
 ALBUMCOVER = undefined; // e.g. cover.jpg
+SHOW_HIDDEN_ALBUMS = undefined; //Displays albums beginning with "!" in the folder name, default = false
 </script>
 
 <style>
@@ -84,7 +85,8 @@ var config = {
   sslEnabled: undefined,
   forcePathStyle: undefined,
   prefix: undefined,
-  albumCover: undefined
+  albumCover: undefined,
+  showHiddenAlbums: undefined
 };
 
 function detectConfig() {
@@ -116,7 +118,7 @@ function detectConfig() {
   config.endpoint = ENDPOINT || config.endpoint;
   config.forcePathStyle = FORCE_PATH_STYLE || config.forcePathStyle;
   config.albumCover = ALBUMCOVER || "cover.jpg";
-
+  config.showHiddenAlbums = SHOW_HIDDEN_ALBUMS || false;
 }
 
 /*
@@ -142,7 +144,12 @@ function ls(dir, cb) { //Function gets the list of albums from the directory pas
 
     //Parse the list of directories returned in Common Prefixes
     var dirs = $.map($(data).find('CommonPrefixes Prefix'), function (k) {
-      return basename(k.innerHTML); //Contains the folder name
+
+      //Ignore albums beginning with !, as those will be hidden
+      if(basename(k.innerHTML).substring(0,1) != "!" || config.showHiddenAlbums == true){
+        return basename(k.innerHTML); //Contains the folder name
+      }
+      
     });
 
     cb(null, dirs);
