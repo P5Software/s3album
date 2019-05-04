@@ -57,11 +57,13 @@ DISPLAY_SUBFOLDERS = undefined; //false
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js"></script>
+
 <script>
 
 /*
  * Helpers
  */
+
 function stripExt(path) {
   return path.slice(0, path.lastIndexOf('.'));
 }
@@ -133,12 +135,15 @@ function bucketBaseUrl() {
   return url;
 }
 
+
 function ls(dir, cb) {
   var url = bucketBaseUrl() + '?delimiter=/&prefix=' + dir;
 
   $.get(url).done(function (data) {
     if (!$(data).find('ListBucketResult').length) return cb('Malformed response');
+
     var files = $.map($(data).find('Contents Key'), function (k) {
+      
       //Do not return directories
       if(k.innerHTML.substr(-1) == "/" && config.displaySubfolders == false){
         console.log("Suppressing Contents (DISPLAY_SUBFOLDERS == false): " + k.innerHTML);
@@ -147,9 +152,11 @@ function ls(dir, cb) {
         return basename(k.innerHTML);
       };
     });
+
     var dirs = $.map($(data).find('CommonPrefixes Prefix'), function (k) {
       return basename(k.innerHTML);
     });
+
     cb(null, files, dirs);
   }).fail(function (x, y, err) {
     if (cb) return cb(err);
@@ -157,13 +164,21 @@ function ls(dir, cb) {
   });
 }
 
+
+/*
+ * Album and photo utils
+ */
+
+
 function albumPhotoPath(album) {
   return rmTrailingChar(config.prefix, '/') + 'albums/' + encodeURIComponent(album) + '/photos/';
 }
 
+
 function albumThumbPath(album) {
   return rmTrailingChar(config.prefix, '/') + 'albums/' + encodeURIComponent(album) + '/thumbs/';
 }
+
 
 function getPhotos(album, cb) {
   if (!album || album === '' ) return cb('Bad album name');
@@ -181,11 +196,14 @@ function getPhotos(album, cb) {
   });
 }
 
+
 function albumNameFromHash() {
   return decodeURIComponent(location.hash.slice(1).split('/')[0]);
 }
 
+
 var albumName;
+
 function loadAlbum() {
   albumName = albumNameFromHash();
   if (location.hash.indexOf('/') === -1) location.hash += '/';
@@ -221,18 +239,24 @@ function loadAlbum() {
       $('#albumThumbs').append(strAlbumThumbs.join(''));
 
     });
+
     $(".fancybox").fancybox();
-  });
-}
+  })};
+
+/*
+ * Page Events
+ */
 
 $(window).on('hashchange', function () {
   if (albumNameFromHash() !== albumName)
     loadAlbum();
 });
+
 $(document).ready(function () {
   detectConfig();
   loadAlbum();
 });
+
 </script>
 </body>
 </html>
